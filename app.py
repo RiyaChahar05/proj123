@@ -1,5 +1,9 @@
 import streamlit as st
+import kagglehub
+from kagglehub import KaggleDatasetAdapter
 import numpy as np
+import pandas as pd
+import pickle
 import joblib
 
 # =========================================
