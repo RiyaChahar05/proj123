@@ -1,63 +1,62 @@
 import streamlit as st
 import kagglehub
 from kagglehub import KaggleDatasetAdapter
-import numpy as np
 import pandas as pd
+import numpy as np
 import pickle
-import joblib
 
-# =========================================
-# 📥 Load Saved Files
-# =========================================
+# -----------------------------
+# LOAD MODEL
+# -----------------------------
+with open("model1.pkl", "rb") as f:
+    model, scaler, le, columns = pickle.load(f)
 
-model = joblib.load("smart_model.pkl")
-scaler = joblib.load("scaler.pkl")
-encoders = joblib.load("encoders.pkl")
+# -----------------------------
+# TITLE
+# -----------------------------
+st.title("🌱 Smart Agriculture Prediction App")
 
-st.set_page_config(page_title="Smart Manufacturing IoT", layout="centered")
+st.write("Enter input values to predict output")
 
-st.title("🏭 Smart Manufacturing Prediction")
-st.write("Predict whether maintenance is required based on sensor inputs")
+# -----------------------------
+# USER INPUT (AUTO FROM COLUMNS)
+# -----------------------------
+user_input = []
 
-# =========================================
-# 🧾 INPUT FIELDS (EDIT BASED ON YOUR DATASET)
-# =========================================
+for col in columns:
+    val = st.number_input(f"{col}", value=0.0)
+    user_input.append(val)
 
-# ⚠️ Replace these with your actual feature names
-temperature = st.number_input("Temperature")
-pressure = st.number_input("Pressure")
-humidity = st.number_input("Humidity")
-vibration = st.number_input("Vibration")
-
-# Example categorical input (if exists)
-machine_type = st.selectbox("Machine Type", ["TypeA", "TypeB", "TypeC"])
-
-# =========================================
-# 🔄 Encode categorical input
-# =========================================
-
-if "machine_type" in encoders:
-    machine_type_encoded = encoders["machine_type"].transform([machine_type])[0]
-else:
-    machine_type_encoded = 0
-
-# =========================================
-# 📊 Prepare Input
-# =========================================
-
-input_data = np.array([[temperature, pressure, humidity, vibration, machine_type_encoded]])
-
-# Scale input
-input_scaled = scaler.transform(input_data)
-
-# =========================================
-# 🔮 Prediction
-# =========================================
-
+# -----------------------------
+# PREDICTION
+# -----------------------------
 if st.button("Predict"):
-    prediction = model.predict(input_scaled)[0]
+    try:
+        input_data = pd.DataFrame([user_input], columns=columns)
 
-    if prediction == 1:
-        st.error("⚠️ Maintenance Required!")
-    else:
-        st.success("✅ Machine is Operating Normally")
+        # Scale input
+        input_scaled = scaler.transform(input_data)
+
+        # Predict
+        prediction = model.predict(input_scaled)
+
+        # Decode label
+        result = le.inverse_transform(prediction)
+
+        st.success(f"Prediction: {result[0]}")
+
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+# -----------------------------
+# OPTIONAL: SHOW DATASET
+# -----------------------------
+st.subheader("Dataset Preview")
+
+if st.button("Show Dataset"):
+    df = kagglehub.load_dataset(
+        KaggleDatasetAdapter.PANDAS,
+        "wisam1985/advanced-iot-agriculture-2024",
+        "Advanced_IoT_Dataset.csv"
+    )
+    st.dataframe(df.head())
